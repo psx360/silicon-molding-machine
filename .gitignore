@@ -2,8 +2,10 @@
 build/
 *.iml
 .idea/
+.vs/
 .DS_Store
 
 android-app/app/build/
 esp32-device/.pio/
+esp32-device/.vs/
 esp32-device/.vscode/

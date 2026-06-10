@@ -11,7 +11,7 @@ static const char *STATUS_UUID = "6c8b5a92-7d2c-4c5e-98df-24a16d8a1001";
 static const uint8_t STEP_PIN = 6;
 static const uint8_t DIR_PIN = 7;
 static const uint8_t EN_PIN = 8;
-static const uint16_t STEPS_PER_REVOLUTION = 200;
+static const uint16_t STEPS_PER_REVOLUTION = 1600;
 
 BLECharacteristic *statusCharacteristic = nullptr;
 
@@ -32,19 +32,17 @@ void publishStatus(const char *state) {
 void stopMotor() {
   running = false;
   stepsRemaining = 0;
-  digitalWrite(EN_PIN, HIGH);
   publishStatus("STATUS:STOPPED");
 }
 
-void startMotor(int speed, bool reverse, int revolutions) {
-  speed = constrain(speed, 30, 1000);
-  revolutions = constrain(revolutions, 1, 50);
+void startMotor(int rpm, bool reverse, float revolutions) {
+  rpm = constrain(rpm, 1, 500);
+  revolutions = constrain(revolutions, 0.01f, 1000.0f);
 
-  const unsigned long stepsPerMinute = static_cast<unsigned long>(speed) * STEPS_PER_REVOLUTION;
+  const unsigned long stepsPerMinute = static_cast<unsigned long>(rpm) * STEPS_PER_REVOLUTION;
   stepIntervalMicros = max(200UL, 60000000UL / stepsPerMinute);
-  stepsRemaining = static_cast<long>(revolutions) * STEPS_PER_REVOLUTION;
+  stepsRemaining = max(1L, lroundf(revolutions * STEPS_PER_REVOLUTION));
   digitalWrite(DIR_PIN, reverse ? HIGH : LOW);
-  digitalWrite(EN_PIN, LOW);
   running = true;
   lastStepMicros = micros();
   publishStatus("STATUS:RUNNING");
@@ -72,10 +70,10 @@ void handleCommand(String command) {
       return;
     }
 
-    int speed = command.substring(first + 1, second).toInt();
+    int rpm = command.substring(first + 1, second).toInt();
     bool reverse = command.substring(second + 1, third).toInt() != 0;
-    int revolutions = command.substring(third + 1).toInt();
-    startMotor(speed, reverse, revolutions);
+    float revolutions = command.substring(third + 1).toFloat();
+    startMotor(rpm, reverse, revolutions);
     return;
   }
 
@@ -102,13 +100,19 @@ class ServerCallbacks : public BLEServerCallbacks {
 
 void setup() {
   Serial.begin(115200);
+  unsigned long serialWaitStarted = millis();
+  while (!Serial && millis() - serialWaitStarted < 2000) {
+    delay(10);
+  }
+  Serial.println("Started...");
+  Serial.flush();
 
   pinMode(STEP_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
   pinMode(EN_PIN, OUTPUT);
   digitalWrite(STEP_PIN, LOW);
   digitalWrite(DIR_PIN, LOW);
-  digitalWrite(EN_PIN, HIGH);
+  digitalWrite(EN_PIN, LOW);
 
   BLEDevice::init(DEVICE_NAME);
   BLEServer *server = BLEDevice::createServer();

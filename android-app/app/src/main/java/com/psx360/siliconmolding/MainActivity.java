@@ -43,6 +43,8 @@ import java.util.UUID;
 public class MainActivity extends Activity {
     private static final String PREFS = "silicon_molding";
     private static final String PREF_DEVICE_ID = "device_id";
+    private static final String PREF_SPEED = "speed";
+    private static final String PREF_REVOLUTIONS = "revolutions";
     private static final UUID SERVICE_UUID = UUID.fromString("6c8b5a90-7d2c-4c5e-98df-24a16d8a1001");
     private static final UUID WRITE_UUID = UUID.fromString("6c8b5a91-7d2c-4c5e-98df-24a16d8a1001");
     private static final int REQUEST_PERMISSIONS = 100;
@@ -188,11 +190,11 @@ public class MainActivity extends Activity {
         top.addView(statusView, new LinearLayout.LayoutParams(0, -2, 1));
         top.addView(back);
 
-        EditText speed = numberInput("Скорость 30-1000", "120");
+        EditText speed = numberInput("Скорость, об/мин 1-500", prefs.getString(PREF_SPEED, "100"));
         CheckBox reverse = new CheckBox(this);
         reverse.setText("Обратное направление");
         reverse.setTextSize(18);
-        EditText revolutions = numberInput("Количество оборотов 1-50", "1");
+        EditText revolutions = decimalInput("Количество оборотов 0.01-1000", prefs.getString(PREF_REVOLUTIONS, "50"));
         Button run = button("Поехали");
         Button stop = button("Стоп");
 
@@ -207,10 +209,14 @@ public class MainActivity extends Activity {
         run.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int speedValue = clamp(parseInt(speed.getText().toString(), 120), 30, 1000);
-                int revolutionsValue = clamp(parseInt(revolutions.getText().toString(), 1), 1, 50);
+                int speedValue = clamp(parseInt(speed.getText().toString(), 100), 1, 500);
+                float revolutionsValue = clamp(parseFloat(revolutions.getText().toString(), 50.0f), 0.01f, 1000.0f);
                 speed.setText(String.valueOf(speedValue));
-                revolutions.setText(String.valueOf(revolutionsValue));
+                revolutions.setText(formatFloat(revolutionsValue));
+                prefs.edit()
+                        .putString(PREF_SPEED, String.valueOf(speedValue))
+                        .putString(PREF_REVOLUTIONS, formatFloat(revolutionsValue))
+                        .apply();
                 sendCommand("RUN:" + speedValue + ":" + (reverse.isChecked() ? 1 : 0) + ":" + revolutionsValue);
             }
         });
@@ -260,6 +266,12 @@ public class MainActivity extends Activity {
         input.setText(value);
         input.setTextSize(18);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        return input;
+    }
+
+    private EditText decimalInput(String hint, String value) {
+        EditText input = numberInput(hint, value);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         return input;
     }
 
@@ -415,8 +427,27 @@ public class MainActivity extends Activity {
         }
     }
 
+    private float parseFloat(String text, float fallback) {
+        try {
+            return Float.parseFloat(text.replace(',', '.'));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
     private int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private String formatFloat(float value) {
+        if (value == Math.round(value)) {
+            return String.valueOf(Math.round(value));
+        }
+        return String.valueOf(value);
     }
 
     private void toast(String message) {

@@ -4,6 +4,11 @@ build/
 .idea/
 .vs/
 .DS_Store
+.local/
+artifacts/
+# Device photos contain personal identifiers; requirements are in AGENTS.md.
+androidsettings.jpg
+laptop.jpg
 
 android-app/app/build/
 esp32-device/.pio/

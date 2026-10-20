@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
-static const uint8_t STEP_PIN = 6;
-static const uint8_t DIR_PIN = 7;
-static const uint8_t EN_PIN = 8;
+static const uint8_t STEP_PIN = 4;
+static const uint8_t DIR_PIN = 19;
+static const uint8_t EN_PIN = 2;
 
 static const uint16_t STEPS_PER_REVOLUTION = 600;
 static const unsigned long STEP_INTERVAL_MICROS = 2000;
